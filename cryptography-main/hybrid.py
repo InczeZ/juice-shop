@@ -205,83 +205,81 @@ elif operation == 'enc':
     print('Done.')
     print('Your solution to Challenge 3: ' + ciphertext[:16].hex())
     print('Hint: The correct solution starts with a0a0a9.')
-# ----------
-# decryption
-# ----------
 
 elif operation == 'dec':
     print('Decrypting...')
 
-    # # read and parse the input
-    # encsymkey = b''
-    # iv = b''
-    # ciphertext = b''
-    # signature = b''
-    # sign = False
+    # read and parse the input
+    encsymkey = b''
+    iv = b''
+    ciphertext = b''
+    signature = b''
+    sign = False
 
-    # with open(inputfile, 'r') as f:
-    #     hybrid_struct = json.loads(f.read())
+    with open(inputfile, 'r') as f:
+        hybrid_struct = json.loads(f.read())
 
-    # if 'ENCRYPTED AES KEY' in hybrid_struct:
-    #     encsymkey = b64decode(
-    #         hybrid_struct['ENCRYPTED AES KEY'].encode('ascii'))
-    # if 'IV FOR CBC MODE' in hybrid_struct:
-    #     iv = b64decode(hybrid_struct['IV FOR CBC MODE'].encode('ascii'))
-    # if 'CIPHERTEXT' in hybrid_struct:
-    #     ciphertext = b64decode(hybrid_struct['CIPHERTEXT'].encode('ascii'))
-    # if 'SIGNATURE' in hybrid_struct:
-    #     signature = b64decode(hybrid_struct['SIGNATURE'].encode('ascii'))
-    #     sign = True
+    if 'ENCRYPTED AES KEY' in hybrid_struct:
+        encsymkey = b64decode(
+            hybrid_struct['ENCRYPTED AES KEY'].encode('ascii'))
+    if 'IV FOR CBC MODE' in hybrid_struct:
+        iv = b64decode(hybrid_struct['IV FOR CBC MODE'].encode('ascii'))
+    if 'CIPHERTEXT' in hybrid_struct:
+        ciphertext = b64decode(hybrid_struct['CIPHERTEXT'].encode('ascii'))
+    if 'SIGNATURE' in hybrid_struct:
+        signature = b64decode(hybrid_struct['SIGNATURE'].encode('ascii'))
+        sign = True
 
-    # if (not encsymkey) or (not iv) or (not ciphertext):
-    #     print('Error: Could not parse content of input file ' + inputfile)
-    #     sys.exit(1)
+    if (not encsymkey) or (not iv) or (not ciphertext):
+        print('Error: Could not parse content of input file ' + inputfile)
+        sys.exit(1)
 
-    # if sign and (not pubkeyfile):
-    #     print('Error: Public key file is missing, signature cannot be verified.')
-    #     sys.exit(1)
+    if sign and (not pubkeyfile):
+        print('Error: Public key file is missing, signature cannot be verified.')
+        sys.exit(1)
 
-    # # verify signature if needed
-    # if sign:
-    #     pubkey = load_publickey(pubkeyfile)
-    #     # TODO: verifier = ...
-    #     # TODO: hashfn = ...
-    #     # TODO: hashfn.update(__)
-    #     # TODO: if verifier.verify(__, __) == True:
-    #     print('Signature verification is successful.')
-    # else:
-    #     print('Signature verification is failed.')
-    #     yn = input('Do you want to continue (y/n)? ')
-    #     if yn != 'y':
-    #         sys.exit(1)
+    # verify signature if needed
+    if sign:
+        pubkey = load_publickey(pubkeyfile)
+        verifier = PKCS1_PSS.new(pubkey)
+        hashfn = SHA256.new()
+        hashfn.update(encsymkey + iv + ciphertext)
+        if verifier.verify(hashfn, signature):
+            print('Signature verification is successful.')
+        else:
+            print('Signature verification failed.')
+            yn = input('Do you want to continue (y/n)? ')
+            if yn != 'y':
+                sys.exit(1)
 
-    # # load the private key from the private key file and
-    # # create the RSA cipher object
-    # keypair = load_keypair(privkeyfile)
-    # # TODO: RSAcipher = ...
+    # load the private key from the private key file and
+    # create the RSA cipher object
+    keypair = load_keypair(privkeyfile)
+    RSAcipher = PKCS1_OAEP.new(keypair)
 
-    # # decrypt the AES key
-    # try:
-    #     # TODO: symkey = ...
-    # except ValueError:
-    #     print('Error: Decryption of AES key is failed.')
-    #     sys.exit(1)
+    # decrypt the AES key
+    try:
+        symkey = RSAcipher.decrypt(encsymkey)
+    except ValueError:
+        print('Error: Decryption of AES key failed.')
+        sys.exit(1)
 
-    # # create the AES-CBC cipher object
-    # # TODO: AEScipher = ...
+    # create the AES-CBC cipher object
+    AEScipher = AES.new(symkey, AES.MODE_CBC, iv)
 
-    # # decrypt the ciphertext and remove padding
-    # try:
-    #     # TODO: padded_plaintext = ...
-    #     # TODO: plaintext = ...
-    # except ValueError:
-    #     print('Error: Decryption of the ciphertext is failed.')
-    #     sys.exit(1)
+    # decrypt the ciphertext and remove padding
+    try:
+        padded_plaintext = AEScipher.decrypt(ciphertext)
+        plaintext = Padding.unpad(
+            padded_plaintext, AES.block_size, style='pkcs7')
+    except ValueError:
+        print('Error: Decryption of the ciphertext failed.')
+        sys.exit(1)
 
-    # # write out the plaintext into the output file
-    # with open(outputfile, 'wb') as f:
-    #     f.write(plaintext)
+    # write out the plaintext into the output file
+    with open(outputfile, 'wb') as f:
+        f.write(plaintext)
 
-    # print('Done.')
-    # print('Your solution to Challenge 4: ' + plaintext[-16:].hex())
-    # print('Hint: The correct solution starts with 6f6620.')
+    print('Done.')
+    print('Your solution to Challenge 4: ' + plaintext[-16:].hex())
+    print('Hint: The correct solution starts with 6f6620.')
